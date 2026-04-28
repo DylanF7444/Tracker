@@ -1,0 +1,23 @@
+{
+  "name": "focus-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cross-device activity tracking platform with Tauri desktop agent and encrypted sync.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "dev:sync": "npm --workspace @focus/sync-server run dev",
+    "dev:desktop": "npm --workspace @focus/desktop run tauri:dev",
+    "dev:dashboard": "npm --workspace @focus/dashboard run dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@focus/mobile-android",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo \"Build with Gradle/Android Studio (see setup.md).\"",
+    "typecheck": "echo \"Typecheck handled by Kotlin compiler in Android build.\""
+  }
+}

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Focus</title>
+    <style>
+      body {
+        width: 260px;
+        margin: 0;
+        font-family: Inter, "Segoe UI", sans-serif;
+        padding: 12px;
+        background: #f8fafc;
+      }
+      .card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+      p {
+        margin: 6px 0;
+        font-size: 12px;
+      }
+      a {
+        color: #2563eb;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Focus tracker</h1>
+      <p id="state">Loading...</p>
+      <p><a href="options.html" target="_blank">Open settings</a></p>
+    </div>
+    <script type="module">
+      const state = document.getElementById("state");
+      chrome.storage.local.get("focusStatus").then((value) => {
+        state.textContent = `Sync status: ${value.focusStatus ?? "unknown"}`;
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,193 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sora', var(--font-sans), sans-serif; }
+  .shell { display: grid; grid-template-columns: 200px 1fr; grid-template-rows: 48px 1fr; min-height: 560px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; }
+  .topbar { grid-column: 1 / -1; background: var(--color-background-primary); border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+  .topbar-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+  .topbar-pill { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--color-background-info); color: var(--color-text-info); font-weight: 500; }
+  .sync-btn { margin-left: auto; font-size: 11px; padding: 4px 10px; border-radius: 99px; border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-secondary); cursor: pointer; display: flex; align-items: center; gap: 5px; font-family: inherit; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #3ac27d; }
+  .sidebar { background: var(--color-background-secondary); border-right: 0.5px solid var(--color-border-tertiary); padding: 16px 0; display: flex; flex-direction: column; gap: 2px; }
+  .nav-item { padding: 7px 16px; font-size: 12px; font-weight: 400; color: var(--color-text-secondary); cursor: pointer; border-radius: 6px; margin: 0 6px; transition: background .15s; display: flex; align-items: center; gap: 8px; }
+  .nav-item.active { background: var(--color-background-primary); color: var(--color-text-primary); font-weight: 500; border: 0.5px solid var(--color-border-tertiary); }
+  .nav-icon { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+  .nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-tertiary); padding: 10px 16px 4px; font-weight: 500; }
+  .main { background: var(--color-background-tertiary); padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .stat { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 12px 14px; }
+  .stat-label { font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 4px; }
+  .stat-val { font-size: 20px; font-weight: 500; color: var(--color-text-primary); font-family: 'DM Mono', monospace; }
+  .stat-sub { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+  .section-label { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: .06em; }
+  .timeline-wrap { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 14px; }
+  .tl-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .tl-title { font-size: 13px; font-weight: 500; }
+  .tl-date { font-size: 11px; color: var(--color-text-tertiary); margin-left: auto; font-family: 'DM Mono', monospace; }
+  .tl-track { position: relative; height: 44px; border-radius: 6px; overflow: hidden; background: var(--color-background-secondary); }
+  .tl-hours { display: flex; margin-top: 4px; }
+  .tl-h { flex: 1; font-size: 9px; color: var(--color-text-tertiary); font-family: 'DM Mono', monospace; text-align: center; }
+  .seg { position: absolute; top: 6px; height: 32px; border-radius: 4px; display: flex; align-items: center; padding: 0 6px; overflow: hidden; }
+  .seg-label { font-size: 10px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 14px; }
+  .card-title { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 10px; }
+  .app-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .app-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .app-name { font-size: 12px; color: var(--color-text-primary); flex: 1; }
+  .app-bar-bg { flex: 1.5; height: 5px; border-radius: 3px; background: var(--color-background-secondary); overflow: hidden; }
+  .app-bar { height: 5px; border-radius: 3px; }
+  .app-time { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--color-text-tertiary); min-width: 36px; text-align: right; }
+  .device-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .device-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .device-icon { width: 28px; height: 28px; border-radius: 6px; background: var(--color-background-secondary); display: flex; align-items: center; justify-content: center; }
+  .device-name { font-size: 12px; font-weight: 500; }
+  .device-sub { font-size: 11px; color: var(--color-text-tertiary); }
+  .device-badge { margin-left: auto; font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
+  .badge-on { background: #d4f0e3; color: #1a7a4a; }
+  .badge-off { background: var(--color-background-secondary); color: var(--color-text-tertiary); }
+  .focus-meter { height: 6px; border-radius: 3px; background: var(--color-background-secondary); overflow: hidden; margin-top: 8px; }
+  .focus-fill { height: 6px; border-radius: 3px; background: linear-gradient(to right, #3B8BD4, #1D9E75); width: 68%; }
+  .focus-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--color-text-tertiary); margin-top: 4px; }
+</style>
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Activity tracking dashboard outline showing timeline, app usage, and device sync</h2>
+<div class="shell">
+  <div class="topbar">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="var(--color-text-primary)" opacity=".7"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="var(--color-text-primary)" opacity=".4"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="var(--color-text-primary)" opacity=".4"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="var(--color-text-primary)" opacity=".7"/></svg>
+    <span class="topbar-title">Focus</span>
+    <span class="topbar-pill">Dashboard</span>
+    <button class="sync-btn"><span class="sync-dot"></span>All devices synced</button>
+  </div>
+  <div class="sidebar">
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active">
+      <div class="nav-icon" style="background:#3B8BD4;"></div>Today
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon" style="background:#1D9E75;"></div>Weekly
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon" style="background:#BA7517;"></div>Trends
+    </div>
+    <div class="nav-section">Tracking</div>
+    <div class="nav-item">
+      <div class="nav-icon" style="background:#534AB7;"></div>Apps
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon" style="background:#993C1D;"></div>Websites
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon" style="background:#993556;"></div>Phone
+    </div>
+    <div class="nav-section">Settings</div>
+    <div class="nav-item">
+      <div class="nav-icon" style="background:var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary);"></div>Devices
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon" style="background:var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary);"></div>Goals
+    </div>
+  </div>
+  <div class="main">
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-label">Screen time</div>
+        <div class="stat-val">6h 42m</div>
+        <div class="stat-sub">↓ 14% vs yesterday</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Deep focus</div>
+        <div class="stat-val">2h 18m</div>
+        <div class="stat-sub">↑ 32% vs yesterday</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Top app</div>
+        <div class="stat-val" style="font-size:14px;padding-top:3px;">VS Code</div>
+        <div class="stat-sub">1h 54m today</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Phone pickups</div>
+        <div class="stat-val">34</div>
+        <div class="stat-sub">↓ 8 vs yesterday</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:8px;">Day timeline</div>
+      <div class="timeline-wrap">
+        <div class="tl-header">
+          <span class="tl-title">Activity</span>
+          <span class="tl-date">Thu Apr 24, 2026</span>
+        </div>
+        <div style="position:relative;">
+          <div class="tl-track">
+            <div class="seg" style="left:1%;width:5%;background:#E6F1FB;"><span class="seg-label" style="color:#185FA5;">Mail</span></div>
+            <div class="seg" style="left:7%;width:17%;background:#EAF3DE;"><span class="seg-label" style="color:#3B6D11;">VS Code</span></div>
+            <div class="seg" style="left:25%;width:9%;background:#EEEDFE;"><span class="seg-label" style="color:#534AB7;">Figma</span></div>
+            <div class="seg" style="left:35%;width:4%;background:#FAEEDA;"><span class="seg-label" style="color:#854F0B;">Slack</span></div>
+            <div class="seg" style="left:40%;width:11%;background:#EAF3DE;"><span class="seg-label" style="color:#3B6D11;">VS Code</span></div>
+            <div class="seg" style="left:52%;width:4%;background:#FBEAF0;"><span class="seg-label" style="color:#993556;">YT</span></div>
+            <div class="seg" style="left:57%;width:13%;background:#EAF3DE;"><span class="seg-label" style="color:#3B6D11;">VS Code</span></div>
+            <div class="seg" style="left:71%;width:7%;background:#E1F5EE;"><span class="seg-label" style="color:#0F6E56;">Notion</span></div>
+            <div class="seg" style="left:79%;width:5%;background:#FAEEDA;"><span class="seg-label" style="color:#854F0B;">Slack</span></div>
+            <div class="seg" style="left:85%;width:8%;background:#FAECE7;"><span class="seg-label" style="color:#993C1D;">Safari</span></div>
+          </div>
+          <div class="tl-hours">
+            <div class="tl-h">8am</div><div class="tl-h">9</div><div class="tl-h">10</div><div class="tl-h">11</div>
+            <div class="tl-h">12pm</div><div class="tl-h">1</div><div class="tl-h">2</div><div class="tl-h">3</div>
+            <div class="tl-h">4</div><div class="tl-h">5</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">
+          <div style="font-size:10px;padding:2px 8px;border-radius:99px;background:#EAF3DE;color:#3B6D11;font-weight:500;">VS Code 1h 54m</div>
+          <div style="font-size:10px;padding:2px 8px;border-radius:99px;background:#EEEDFE;color:#534AB7;font-weight:500;">Figma 52m</div>
+          <div style="font-size:10px;padding:2px 8px;border-radius:99px;background:#FAEEDA;color:#854F0B;font-weight:500;">Slack 41m</div>
+          <div style="font-size:10px;padding:2px 8px;border-radius:99px;background:#E1F5EE;color:#0F6E56;font-weight:500;">Notion 38m</div>
+          <div style="font-size:10px;padding:2px 8px;border-radius:99px;background:#FAECE7;color:#993C1D;font-weight:500;">Safari 28m</div>
+          <div style="font-size:10px;padding:2px 8px;border-radius:99px;background:#FBEAF0;color:#993556;font-weight:500;">YouTube 18m</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Top apps & sites</div>
+        <div class="app-row"><div class="app-dot" style="background:#3B6D11;"></div><span class="app-name">VS Code</span><div class="app-bar-bg"><div class="app-bar" style="width:80%;background:#639922;"></div></div><span class="app-time">1h 54m</span></div>
+        <div class="app-row"><div class="app-dot" style="background:#534AB7;"></div><span class="app-name">Figma</span><div class="app-bar-bg"><div class="app-bar" style="width:46%;background:#7F77DD;"></div></div><span class="app-time">52m</span></div>
+        <div class="app-row"><div class="app-dot" style="background:#854F0B;"></div><span class="app-name">Slack</span><div class="app-bar-bg"><div class="app-bar" style="width:36%;background:#EF9F27;"></div></div><span class="app-time">41m</span></div>
+        <div class="app-row"><div class="app-dot" style="background:#0F6E56;"></div><span class="app-name">Notion</span><div class="app-bar-bg"><div class="app-bar" style="width:33%;background:#1D9E75;"></div></div><span class="app-time">38m</span></div>
+        <div class="app-row"><div class="app-dot" style="background:#993C1D;"></div><span class="app-name">github.com</span><div class="app-bar-bg"><div class="app-bar" style="width:24%;background:#D85A30;"></div></div><span class="app-time">28m</span></div>
+        <div class="app-row"><div class="app-dot" style="background:#993556;"></div><span class="app-name">YouTube</span><div class="app-bar-bg"><div class="app-bar" style="width:16%;background:#D4537E;"></div></div><span class="app-time">18m</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Connected devices</div>
+        <div class="device-row">
+          <div class="device-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="8" rx="1.5" stroke="var(--color-text-primary)" stroke-width="1.1" opacity=".7"/><path d="M4 12h6M7 10v2" stroke="var(--color-text-primary)" stroke-width="1.1" stroke-linecap="round" opacity=".5"/></svg>
+          </div>
+          <div><div class="device-name">MacBook Pro</div><div class="device-sub">macOS — tracking active</div></div>
+          <div class="device-badge badge-on">Live</div>
+        </div>
+        <div class="device-row">
+          <div class="device-icon">
+            <svg width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="1" width="10" height="12" rx="2" stroke="var(--color-text-primary)" stroke-width="1.1" opacity=".7"/><circle cx="6" cy="11" r="0.8" fill="var(--color-text-primary)" opacity=".5"/></svg>
+          </div>
+          <div><div class="device-name">iPhone 16</div><div class="device-sub">iOS — last synced 2m ago</div></div>
+          <div class="device-badge badge-on">Synced</div>
+        </div>
+        <div class="device-row">
+          <div class="device-icon">
+            <svg width="14" height="10" viewBox="0 0 14 10" fill="none"><rect x="1" y="1" width="12" height="8" rx="1.5" stroke="var(--color-text-primary)" stroke-width="1.1" opacity=".5"/></svg>
+          </div>
+          <div><div class="device-name">iPad Air</div><div class="device-sub">iPadOS — add device</div></div>
+          <div class="device-badge badge-off">Offline</div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-size:11px;color:var(--color-text-secondary);">Focus score today</span><span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--color-text-primary);">68%</span></div>
+          <div class="focus-meter"><div class="focus-fill"></div></div>
+          <div class="focus-label"><span>distracted</span><span>deep focus</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

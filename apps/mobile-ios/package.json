@@ -1,0 +1,9 @@
+{
+  "name": "@focus/mobile-ios",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo \"Build with Xcode (see setup.md).\"",
+    "typecheck": "echo \"Typecheck handled by Xcode Swift compiler.\""
+  }
+}

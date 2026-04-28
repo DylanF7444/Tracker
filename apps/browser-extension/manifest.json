@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Focus Browser Tracker",
+  "version": "1.0.0",
+  "description": "Tracks active tab URLs/titles and syncs encrypted activity sessions to Focus sync service.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms",
+    "idle"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Focus Tracker",
+    "default_popup": "src/popup.html"
+  },
+  "options_page": "src/options.html"
+}

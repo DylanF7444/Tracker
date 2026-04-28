@@ -1,0 +1,28 @@
+node_modules
+dist
+build
+coverage
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+!.env.example
+
+# Rust / Tauri
+target
+apps/desktop/src-tauri/target
+
+# SQLite data
+*.db
+*.db-shm
+*.db-wal
+data
+
+# Android / iOS build outputs
+.gradle
+local.properties
+apps/mobile-android/.idea
+apps/mobile-android/app/build
+apps/mobile-ios/DerivedData
+apps/mobile-ios/build

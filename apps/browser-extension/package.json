@@ -1,0 +1,10 @@
+{
+  "name": "@focus/browser-extension",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "echo \"Browser extension is static and ready to load unpacked.\"",
+    "typecheck": "echo \"No build-time typecheck for extension JS.\""
+  }
+}

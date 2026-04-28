@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Focus Extension Settings</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Inter, "Segoe UI", sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+      main {
+        max-width: 780px;
+        margin: 24px auto;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      form {
+        display: grid;
+        gap: 12px;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 14px;
+      }
+      input {
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 9px 10px;
+      }
+      button {
+        justify-self: start;
+        border: 1px solid #2563eb;
+        border-radius: 8px;
+        background: #2563eb;
+        color: white;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      #status {
+        margin: 0;
+        color: #166534;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Focus browser tracking settings</h1>
+      <form id="settings-form">
+        <label>
+          Sync server URL
+          <input id="server-url" />
+        </label>
+        <label>
+          User ID
+          <input id="user-id" />
+        </label>
+        <label>
+          Device ID
+          <input id="device-id" />
+        </label>
+        <label>
+          Encryption key
+          <input id="encryption-key" />
+        </label>
+        <button type="submit">Save settings</button>
+      </form>
+      <p id="status"></p>
+    </main>
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>
