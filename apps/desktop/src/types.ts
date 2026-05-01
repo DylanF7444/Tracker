@@ -8,6 +8,8 @@ type ActivityCategory =
   | "break"
   | "system";
 
+export type TrackingSource = "desktop-window" | "browser-tab" | "mobile-usage" | "manual-tag";
+
 export interface StatBlock {
   totalScreenMinutes: number;
   deepFocusMinutes: number;
@@ -20,6 +22,7 @@ export interface TimelineSegment {
   id: string;
   label: string;
   category: ActivityCategory;
+  source: TrackingSource;
   startTs: string;
   endTs: string;
   pageUrl: string;

@@ -194,6 +194,9 @@ body {
   font-size: 15px;
   font-weight: 600;
   color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .detected-device-meta {
@@ -202,10 +205,60 @@ body {
   color: #64748b;
 }
 
+.device-app-icon {
+  width: 18px;
+  display: inline-flex;
+  justify-content: center;
+}
+
 .detected-device-empty {
   margin: 0;
   color: #64748b;
   font-size: 13px;
+}
+
+.device-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.device-usage-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.device-usage-card h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.device-usage-total {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.device-usage-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.device-usage-pill {
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  padding: 2px 8px;
+  background: #fff;
+  font-size: 11px;
+}
+
+.device-usage-meta {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #64748b;
 }
 
 .goal-alerts {
@@ -231,41 +284,288 @@ body {
   margin-bottom: 10px;
 }
 
+.timeline-card {
+  overflow: hidden;
+}
+
+.timeline-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
 .timeline-row-label {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 6px;
   font-size: 12px;
   color: #475569;
 }
 
-.timeline-track {
+.timeline-row-usage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.timeline-row-usage-pill {
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.timeline-lanes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.timeline-lanes-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+}
+
+.timeline-lanes-zoom {
+  min-width: 100%;
+}
+
+.timeline-lane {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.timeline-lane-label-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.timeline-lane-label {
+  font-size: 11px;
+  color: #475569;
+  text-align: right;
+}
+
+.timeline-overlap-badge {
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+}
+
+.timeline-track-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timeline-track-row {
   position: relative;
-  height: 32px;
+  height: 30px;
   border-radius: 8px;
   background: #e2e8f0;
 }
 
 .timeline-segment {
   position: absolute;
-  top: 4px;
+  top: 3px;
   height: 24px;
   border: 0;
   border-radius: 6px;
   color: #fff;
-  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  padding: 0 8px;
+  padding: 0;
+  cursor: pointer;
+  min-width: 10px;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.timeline-segment.selected {
+  outline: 2px solid #0f172a;
+  outline-offset: 1px;
+}
+
+.timeline-segment-icon {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.timeline-segment-icon img {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+.timeline-device-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.timeline-device-filters button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
   cursor: pointer;
 }
 
-.timeline-segment span {
-  display: block;
-  max-width: 100%;
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.timeline-device-filters button.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.timeline-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline-nav-controls button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.timeline-nav-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.timeline-nav-status {
+  min-width: 64px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.timeline-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline-zoom-controls button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.timeline-zoom-controls button.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.timeline-zoom-controls input[type="range"] {
+  width: 140px;
+}
+
+.timeline-zoom-value {
+  min-width: 40px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.timeline-row.expanded {
+  grid-template-columns: 220px 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.timeline-row.expanded .timeline-lane {
+  grid-template-columns: 88px 1fr;
+}
+
+.timeline-row.expanded .timeline-lane-label {
+  font-size: 12px;
+}
+
+.timeline-row.expanded .timeline-track-row {
+  height: 42px;
+}
+
+.timeline-row.expanded .timeline-segment {
+  top: 4px;
+  height: 34px;
+}
+
+.timeline-row.expanded .timeline-segment-icon {
+  font-size: 14px;
+}
+
+.timeline-row.expanded .timeline-segment-icon img {
+  width: 18px;
+  height: 18px;
+}
+
+.selected-segment-card {
+  margin-top: 12px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.selected-segment-card h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.selected-segment-title {
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.selected-segment-meta {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.selected-segment-url {
+  margin-top: 4px;
+  word-break: break-word;
 }
 
 .chart-row {

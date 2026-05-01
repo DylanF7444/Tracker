@@ -113,6 +113,7 @@ struct TimelineSegment {
     id: String,
     label: String,
     category: String,
+    source: String,
     start_ts: String,
     end_ts: String,
     page_url: String,
@@ -689,6 +690,7 @@ fn build_dashboard(path: &PathBuf, day: Option<String>) -> Result<DashboardSnaps
                     session.window_title.clone()
                 },
                 category: session.category.clone(),
+                source: session.source.clone(),
                 start_ts: session.start_ts.clone(),
                 end_ts: session.end_ts.clone(),
                 page_url: session.page_url.clone(),
@@ -824,6 +826,7 @@ fn tracking_loop(
     stop_flag: std::sync::Arc<AtomicBool>,
     focus_mode: std::sync::Arc<AtomicBool>,
 ) {
+    let sample_interval = Duration::from_secs(1);
     let device_state = DeviceState::new();
     let mut last_mouse: MouseState = device_state.get_mouse();
     let mut last_keys: Vec<Keycode> = device_state.get_keys();
@@ -852,12 +855,12 @@ fn tracking_loop(
                 active.end_ts = now_iso();
                 let _ = insert_session(&db_path, &active, false);
             }
-            std::thread::sleep(Duration::from_secs(5));
+            std::thread::sleep(sample_interval);
             continue;
         }
 
         let Some((app_name, title)) = get_active_window() else {
-            std::thread::sleep(Duration::from_secs(5));
+            std::thread::sleep(sample_interval);
             continue;
         };
 
@@ -867,7 +870,7 @@ fn tracking_loop(
                 active.end_ts = now_iso();
                 let _ = insert_session(&db_path, &active, false);
             }
-            std::thread::sleep(Duration::from_secs(5));
+            std::thread::sleep(sample_interval);
             continue;
         }
 
@@ -907,7 +910,12 @@ fn tracking_loop(
             });
         }
 
-        std::thread::sleep(Duration::from_secs(5));
+        if let Some(active) = current.as_mut() {
+            active.end_ts = now_iso();
+            let _ = insert_session(&db_path, active, false);
+        }
+
+        std::thread::sleep(sample_interval);
     }
 }
 
