@@ -54,11 +54,19 @@ export interface WeeklyTrendItem {
   system: number;
 }
 
+export interface DeviceUsageSummary {
+  deviceType: "desktop" | "mobile" | "browser";
+  deviceId: string;
+  dailyMinutes: number;
+  weeklyMinutes: number;
+}
+
 export interface DashboardSnapshot {
   stats: StatBlock;
   timelineRows: TimelineRow[];
   topUsage: TopUsageItem[];
   weeklyTrend: WeeklyTrendItem[];
+  deviceUsage: DeviceUsageSummary[];
   goalAlerts: string[];
 }
 

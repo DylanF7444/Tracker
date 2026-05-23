@@ -27,17 +27,39 @@ function toDayStart(ts: string): number {
   return date.getTime();
 }
 
+function toDayEnd(dayStartMs: number): number {
+  const end = new Date(dayStartMs);
+  end.setDate(end.getDate() + 1);
+  return end.getTime();
+}
+
 function minutesBetween(startTs: string, endTs: string): number {
   return Math.max(0, Math.round((new Date(endTs).getTime() - new Date(startTs).getTime()) / 60000));
 }
 
-function toPercent(startTs: string, endTs: string): { left: number; width: number } {
-  const dayStart = toDayStart(startTs);
-  const fullDay = 24 * 60 * 60 * 1000;
+function shortenMiddle(value: string, headLength = 8, tailLength = 4): string {
+  if (value.length <= headLength + tailLength + 3) return value;
+  return `${value.slice(0, headLength)}...${value.slice(-tailLength)}`;
+}
+
+function formatDeviceLabel(deviceType: TimelineRow["deviceType"], deviceId: string): string {
+  if (!deviceId) return deviceType;
+  const prefix = `${deviceType}-`;
+  const trimmedId = deviceId.toLowerCase().startsWith(prefix) ? deviceId.slice(prefix.length) : deviceId;
+  return `${deviceType} · ${shortenMiddle(trimmedId, 8, 4)}`;
+}
+
+function toPercent(startTs: string, endTs: string, dayStartOverride?: number): { left: number; width: number } {
+  const dayStart = dayStartOverride ?? toDayStart(startTs);
+  const dayEnd = toDayEnd(dayStart);
+  const fullDay = Math.max(1, dayEnd - dayStart);
   const start = new Date(startTs).getTime();
   const end = new Date(endTs).getTime();
-  const left = ((start - dayStart) / fullDay) * 100;
-  const width = Math.max(0.5, ((end - start) / fullDay) * 100);
+  const clampedStart = Math.max(start, dayStart);
+  const clampedEnd = Math.min(end, dayEnd);
+  const left = ((clampedStart - dayStart) / fullDay) * 100;
+  const duration = Math.max(0, clampedEnd - clampedStart);
+  const width = Math.max(0.5, (duration / fullDay) * 100);
   return { left, width };
 }
 
@@ -82,6 +104,7 @@ type TimelineRowTrackProps = {
   selectedSegmentId?: string;
   zoomLevel?: number;
   expanded?: boolean;
+  dayStartMs?: number;
   onSelectSegment?: (segment: TimelineSegment, row: TimelineRow) => void;
 };
 
@@ -90,6 +113,7 @@ export function TimelineRowTrack({
   selectedSegmentId,
   zoomLevel = 1,
   expanded = false,
+  dayStartMs,
   onSelectSegment
 }: TimelineRowTrackProps) {
   const [brokenIcons, setBrokenIcons] = useState<Record<string, boolean>>({});
@@ -166,7 +190,7 @@ export function TimelineRowTrack({
     <div className={`timeline-row ${expanded ? "expanded" : ""}`}>
       <div className="timeline-row-label">
         <strong>
-          {row.deviceType} · {row.deviceId}
+          {formatDeviceLabel(row.deviceType, row.deviceId)}
         </strong>
         <div className="timeline-row-usage">
           {sourceBreakdown.map(([source, minutes]) => (
@@ -189,7 +213,7 @@ export function TimelineRowTrack({
                   {tracks.map((track, trackIndex) => (
                     <div key={`${source}-track-${trackIndex}`} className="timeline-track-row">
                       {track.map((segment) => {
-                        const { left, width } = toPercent(segment.startTs, segment.endTs);
+                        const { left, width } = toPercent(segment.startTs, segment.endTs, dayStartMs);
                         const faviconUrl = getFaviconUrl(segment);
                         const canShowFavicon = !!faviconUrl && !brokenIcons[segment.id];
                         return (

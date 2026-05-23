@@ -3,7 +3,7 @@
 use aes_gcm::aead::{Aead, KeyInit, OsRng};
 use aes_gcm::{Aes256Gcm, Nonce};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
-use chrono::{DateTime, Datelike, Duration as ChronoDuration, NaiveDate, Utc};
+use chrono::{DateTime, Datelike, Duration as ChronoDuration, Local, NaiveDate, TimeZone, Utc};
 use device_query::{DeviceQuery, DeviceState, Keycode, MouseState};
 use rand::RngCore;
 use reqwest::Client;
@@ -154,6 +154,15 @@ struct WeeklyTrendItem {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+struct DeviceUsageSummary {
+    device_type: String,
+    device_id: String,
+    daily_minutes: i64,
+    weekly_minutes: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct DashboardStats {
     total_screen_minutes: i64,
     deep_focus_minutes: i64,
@@ -169,6 +178,7 @@ struct DashboardSnapshot {
     timeline_rows: Vec<TimelineRow>,
     top_usage: Vec<TopUsageItem>,
     weekly_trend: Vec<WeeklyTrendItem>,
+    device_usage: Vec<DeviceUsageSummary>,
     goal_alerts: Vec<String>,
 }
 
@@ -557,10 +567,19 @@ fn parse_ts(ts: &str) -> Result<DateTime<Utc>, String> {
         .map_err(|e| e.to_string())
 }
 
+fn local_day_range(day: NaiveDate) -> Result<(DateTime<Utc>, DateTime<Utc>), String> {
+        let local_start = Local
+            .with_ymd_and_hms(day.year(), day.month(), day.day(), 0, 0, 0)
+            .single()
+            .ok_or_else(|| "Invalid local day start".to_string())?;
+        let local_end = local_start + ChronoDuration::days(1);
+        Ok((local_start.with_timezone(&Utc), local_end.with_timezone(&Utc)))
+}
+
 fn session_minutes(session: &ActivitySession) -> i64 {
-    let start = match parse_ts(&session.start_ts) {
-        Ok(v) => v,
-        Err(_) => return 0,
+        let start = match parse_ts(&session.start_ts) {
+            Ok(v) => v,
+            Err(_) => return 0,
     };
     let end = match parse_ts(&session.end_ts) {
         Ok(v) => v,
@@ -605,12 +624,11 @@ fn load_sessions_between(path: &PathBuf, day_start: DateTime<Utc>, day_end: Date
     rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
 }
 
-fn build_weekly_trend(path: &PathBuf, day_end: DateTime<Utc>) -> Result<Vec<WeeklyTrendItem>, String> {
+fn build_weekly_trend(path: &PathBuf, today: NaiveDate) -> Result<Vec<WeeklyTrendItem>, String> {
     let mut result = Vec::new();
     for offset in (0..7).rev() {
-        let day = day_end.date_naive() - ChronoDuration::days(offset);
-        let start = DateTime::<Utc>::from_naive_utc_and_offset(day.and_hms_opt(0, 0, 0).unwrap(), Utc);
-        let end = start + ChronoDuration::days(1);
+        let day = today - ChronoDuration::days(offset);
+        let (start, end) = local_day_range(day)?;
         let sessions = load_sessions_between(path, start, end)?;
         let mut cat: HashMap<String, i64> = HashMap::new();
         let mut productive = 0;
@@ -648,16 +666,18 @@ fn build_dashboard(path: &PathBuf, day: Option<String>) -> Result<DashboardSnaps
     let day_naive = if let Some(value) = day {
         NaiveDate::parse_from_str(&value, "%Y-%m-%d").map_err(|e| e.to_string())?
     } else {
-        Utc::now().date_naive()
+        Local::now().date_naive()
     };
-    let day_start = DateTime::<Utc>::from_naive_utc_and_offset(day_naive.and_hms_opt(0, 0, 0).unwrap(), Utc);
-    let day_end = day_start + ChronoDuration::days(1);
+    let (day_start, day_end) = local_day_range(day_naive)?;
+    let week_start = day_start - ChronoDuration::days(6);
 
     let settings = load_settings(path)?;
     let sessions = load_sessions_between(path, day_start, day_end)?;
+    let week_sessions = load_sessions_between(path, week_start, day_end)?;
 
     let mut rows: HashMap<(String, String), Vec<TimelineSegment>> = HashMap::new();
     let mut top_usage_map: HashMap<(String, String), i64> = HashMap::new();
+    let mut daily_device_minutes: HashMap<(String, String), i64> = HashMap::new();
     let mut total_screen = 0;
     let mut deep_focus = 0;
     let mut phone_pickups = 0;
@@ -667,6 +687,9 @@ fn build_dashboard(path: &PathBuf, day: Option<String>) -> Result<DashboardSnaps
     for session in &sessions {
         let mins = session_minutes(session);
         total_screen += mins;
+        *daily_device_minutes
+            .entry((session.device_type.clone(), session.device_id.clone()))
+            .or_insert(0) += mins;
         if session.tag.eq_ignore_ascii_case("deep work") || session.productivity == "productive" {
             deep_focus += mins;
         }
@@ -706,6 +729,14 @@ fn build_dashboard(path: &PathBuf, day: Option<String>) -> Result<DashboardSnaps
         *top_usage_map.entry(map_key).or_insert(0) += mins;
     }
 
+    let mut weekly_device_minutes: HashMap<(String, String), i64> = HashMap::new();
+    for session in &week_sessions {
+        let mins = session_minutes(session);
+        *weekly_device_minutes
+            .entry((session.device_type.clone(), session.device_id.clone()))
+            .or_insert(0) += mins;
+    }
+
     let focus_total = productive + distracting;
     let focus_score = if focus_total == 0 {
         50
@@ -743,6 +774,36 @@ fn build_dashboard(path: &PathBuf, day: Option<String>) -> Result<DashboardSnaps
         .collect();
     timeline_rows.sort_by(|a, b| a.device_type.cmp(&b.device_type));
 
+    let mut device_usage_map: HashMap<(String, String), DeviceUsageSummary> = HashMap::new();
+    for ((device_type, device_id), minutes) in weekly_device_minutes {
+        device_usage_map.insert(
+            (device_type.clone(), device_id.clone()),
+            DeviceUsageSummary {
+                device_type,
+                device_id,
+                daily_minutes: 0,
+                weekly_minutes: minutes,
+            },
+        );
+    }
+    for ((device_type, device_id), minutes) in daily_device_minutes {
+        device_usage_map
+            .entry((device_type.clone(), device_id.clone()))
+            .and_modify(|entry| entry.daily_minutes = minutes)
+            .or_insert(DeviceUsageSummary {
+                device_type,
+                device_id,
+                daily_minutes: minutes,
+                weekly_minutes: 0,
+            });
+    }
+    let mut device_usage: Vec<DeviceUsageSummary> = device_usage_map.into_values().collect();
+    device_usage.sort_by(|a, b| {
+        b.weekly_minutes
+            .cmp(&a.weekly_minutes)
+            .then_with(|| b.daily_minutes.cmp(&a.daily_minutes))
+    });
+
     let mut goal_alerts = Vec::new();
     for goal in settings.goals {
         let consumed = if goal.target_type == "category" {
@@ -777,7 +838,8 @@ fn build_dashboard(path: &PathBuf, day: Option<String>) -> Result<DashboardSnaps
         },
         timeline_rows,
         top_usage,
-        weekly_trend: build_weekly_trend(path, day_end)?,
+        weekly_trend: build_weekly_trend(path, day_naive)?,
+        device_usage,
         goal_alerts,
     })
 }

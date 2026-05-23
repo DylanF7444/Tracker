@@ -47,6 +47,25 @@ body {
   font-weight: 600;
 }
 
+.focus-timer {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.focus-timer.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.focus-timer.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .toolbar {
   margin-left: auto;
   display: flex;
@@ -110,6 +129,28 @@ body {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
+}
+
+.stat-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: #e2e8f0;
+}
+
+.stat-icon img {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
 }
 
 .card {
@@ -209,6 +250,13 @@ body {
   width: 18px;
   display: inline-flex;
   justify-content: center;
+  align-items: center;
+}
+
+.device-app-icon img {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
 }
 
 .detected-device-empty {

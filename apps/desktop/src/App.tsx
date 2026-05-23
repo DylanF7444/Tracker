@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -13,6 +14,20 @@ import {
 } from "recharts";
 import { TimelineRowTrack } from "./components/TimelineRowTrack";
 import type { DashboardSnapshot, EditableSettings, TimelineRow, TimelineSegment } from "./types";
+
+type UsageIcon = {
+  kind: "favicon" | "emoji";
+  value: string;
+};
+
+type UsageEntry = {
+  id: string;
+  name: string;
+  label: string;
+  minutes: number;
+  icon: UsageIcon;
+  kind: "app" | "site";
+};
 
 const emptySnapshot: DashboardSnapshot = {
   stats: {
@@ -25,6 +40,7 @@ const emptySnapshot: DashboardSnapshot = {
   timelineRows: [],
   topUsage: [],
   weeklyTrend: [],
+  deviceUsage: [],
   goalAlerts: []
 };
 
@@ -60,6 +76,19 @@ function formatRelativeMinutes(minutes: number): string {
   return `${hours}h ${rem}m ago`;
 }
 
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const paddedMinutes = minutes.toString().padStart(2, "0");
+  const paddedSeconds = seconds.toString().padStart(2, "0");
+  if (hours > 0) {
+    return `${hours}:${paddedMinutes}:${paddedSeconds}`;
+  }
+  return `${minutes}:${paddedSeconds}`;
+}
+
 function safeDomain(url: string): string {
   if (!url) return "";
   try {
@@ -69,16 +98,91 @@ function safeDomain(url: string): string {
   }
 }
 
-function segmentIcon(segment: TimelineSegment): string {
-  const text = segment.label.toLowerCase();
-  if (segment.source === "mobile-usage") return "📱";
-  if (segment.source === "browser-tab") return "🌐";
+function shortenLabel(value: string, maxLength = 18): string {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, Math.max(0, maxLength - 3))}...`;
+}
+
+function shortenMiddle(value: string, headLength = 8, tailLength = 4): string {
+  if (value.length <= headLength + tailLength + 3) return value;
+  return `${value.slice(0, headLength)}...${value.slice(-tailLength)}`;
+}
+
+function formatDeviceLabel(deviceType: string, deviceId: string): string {
+  if (!deviceId) return deviceType;
+  const prefix = `${deviceType}-`;
+  const trimmedId = deviceId.toLowerCase().startsWith(prefix) ? deviceId.slice(prefix.length) : deviceId;
+  return `${deviceType} · ${shortenMiddle(trimmedId, 8, 4)}`;
+}
+
+function getFaviconUrl(domain: string): string {
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+}
+
+function isLikelyDomain(value: string): boolean {
+  if (!value) return false;
+  const lower = value.toLowerCase();
+  if (lower === "localhost") return true;
+  if (value.includes(" ") || value.includes("/") || value.includes("\\")) return false;
+  return value.includes(".");
+}
+
+function fallbackEmoji(label: string): string {
+  const text = label.toLowerCase();
   if (text.includes("code") || text.includes("studio")) return "💻";
   if (text.includes("terminal") || text.includes("powershell") || text.includes("cmd")) return "⌨️";
-  if (text.includes("slack") || text.includes("teams") || text.includes("zoom")) return "💬";
-  if (text.includes("youtube") || text.includes("netflix")) return "🎬";
+  if (text.includes("slack") || text.includes("teams") || text.includes("zoom") || text.includes("discord")) return "💬";
+  if (text.includes("youtube") || text.includes("netflix") || text.includes("twitch")) return "🎬";
   if (text.includes("spotify")) return "🎵";
+  if (text.includes("valorant") || text.includes("steam") || text.includes("epic") || text.includes("game")) return "🎮";
   return "🧩";
+}
+
+function segmentEmoji(segment: TimelineSegment): string {
+  if (segment.source === "mobile-usage") return "📱";
+  if (segment.source === "browser-tab") return "🌐";
+  return fallbackEmoji(segment.label);
+}
+
+function segmentIcon(segment: TimelineSegment): UsageIcon {
+  const domain = safeDomain(segment.pageUrl);
+  if (domain) {
+    return { kind: "favicon", value: getFaviconUrl(domain) };
+  }
+  return { kind: "emoji", value: segmentEmoji(segment) };
+}
+
+function UsageTick({
+  x = 0,
+  y = 0,
+  payload,
+  entries
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value: string };
+  entries: UsageEntry[];
+}) {
+  const entry = entries.find((item) => item.name === payload?.value);
+  if (!entry) return null;
+  const iconSize = 14;
+  const iconY = y - 18;
+  const textY = y + 10;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <title>{entry.name}</title>
+      {entry.icon.kind === "favicon" ? (
+        <image href={entry.icon.value} x={-iconSize / 2} y={iconY} width={iconSize} height={iconSize} />
+      ) : (
+        <text x={0} y={iconY + iconSize} textAnchor="middle" fontSize="12">
+          {entry.icon.value}
+        </text>
+      )}
+      <text x={0} y={textY} textAnchor="middle" fontSize="10" fill="#475569">
+        {entry.label}
+      </text>
+    </g>
+  );
 }
 
 type SelectedSegment = {
@@ -98,6 +202,8 @@ export default function App() {
   const [selectedSegment, setSelectedSegment] = useState<SelectedSegment | null>(null);
   const [timelineZoom, setTimelineZoom] = useState(1.8);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
+  const [activeFocusElapsedMs, setActiveFocusElapsedMs] = useState(0);
+  const [brokenIcons, setBrokenIcons] = useState<Record<string, boolean>>({});
 
   async function refreshDashboard() {
     const [snapshotData, status, trackingActive] = await Promise.all([
@@ -128,14 +234,22 @@ export default function App() {
     };
   }, []);
 
-  const topUsageChartData = useMemo(
-    () =>
-      snapshot.topUsage.map((item) => ({
+  const topUsageEntries = useMemo(() => {
+    return snapshot.topUsage.map((item) => {
+      const isDomain = isLikelyDomain(item.key);
+      const icon: UsageIcon = isDomain
+        ? { kind: "favicon", value: getFaviconUrl(item.key) }
+        : { kind: "emoji", value: fallbackEmoji(item.key) };
+      return {
+        id: item.key,
         name: item.key,
-        minutes: item.minutes
-      })),
-    [snapshot.topUsage]
-  );
+        label: shortenLabel(item.key, 16),
+        minutes: item.minutes,
+        icon,
+        kind: isDomain ? "site" : "app"
+      };
+    });
+  }, [snapshot.topUsage]);
 
   const availableDevices = useMemo(
     () =>
@@ -189,6 +303,12 @@ export default function App() {
     }
     return snapshot.timelineRows.filter((row) => `${row.deviceType}:${row.deviceId}` === selectedDeviceKey);
   }, [selectedDeviceKey, snapshot.timelineRows]);
+
+  const timelineDayStartMs = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now.getTime();
+  }, [snapshot.timelineRows]);
 
   const navigableSessions = useMemo(
     () =>
@@ -248,6 +368,19 @@ export default function App() {
     [snapshot.timelineRows]
   );
 
+  const deviceUsageSeries = useMemo(
+    () =>
+      snapshot.deviceUsage.map((item) => ({
+        device: formatDeviceLabel(item.deviceType, item.deviceId),
+        deviceType: item.deviceType,
+        deviceId: item.deviceId,
+        dailyMinutes: item.dailyMinutes,
+        weeklyMinutes: item.weeklyMinutes
+      })),
+    [snapshot.deviceUsage]
+  );
+  const hasDeviceUsage = deviceUsageSeries.some((entry) => entry.dailyMinutes > 0 || entry.weeklyMinutes > 0);
+
   const latestDetectedByDevice = useMemo(
     () =>
       snapshot.timelineRows
@@ -277,6 +410,30 @@ export default function App() {
         .sort((a, b) => a.deviceType.localeCompare(b.deviceType) || a.deviceId.localeCompare(b.deviceId)),
     [snapshot.timelineRows]
   );
+
+  const activeFocus = useMemo(() => {
+    const activeDevices = latestDetectedByDevice.filter((device) => device.freshness === "active");
+    if (activeDevices.length === 0) {
+      return null;
+    }
+    return activeDevices.reduce((latest, current) =>
+      new Date(current.segment.endTs).getTime() >= new Date(latest.segment.endTs).getTime() ? current : latest
+    );
+  }, [latestDetectedByDevice]);
+
+  useEffect(() => {
+    if (!activeFocus) {
+      setActiveFocusElapsedMs(0);
+      return;
+    }
+    const getElapsed = () =>
+      Math.max(0, Date.now() - new Date(activeFocus.segment.startTs).getTime());
+    setActiveFocusElapsedMs(getElapsed());
+    const interval = window.setInterval(() => {
+      setActiveFocusElapsedMs(getElapsed());
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [activeFocus]);
 
   async function saveSettings() {
     if (!settings) return;
@@ -370,6 +527,20 @@ export default function App() {
       <header className="topbar">
         <div className="brand">Focus</div>
         <div className="status">{syncStatus}</div>
+        <div className={`focus-timer ${activeFocus ? "active" : "inactive"}`}>
+          {activeFocus ? (
+            <span
+              title={safeDomain(activeFocus.segment.pageUrl) || activeFocus.label || "Unknown app"}
+            >
+              {`App focus: ${shortenLabel(
+                safeDomain(activeFocus.segment.pageUrl) || activeFocus.label || "Unknown app",
+                24
+              )} · ${formatDuration(activeFocusElapsedMs)}`}
+            </span>
+          ) : (
+            "No active app"
+          )}
+        </div>
         <div className="toolbar">
           {tracking ? (
             <button type="button" onClick={handleStopTracking}>
@@ -412,7 +583,16 @@ export default function App() {
               </article>
               <article>
                 <h3>Top app</h3>
-                <p>{snapshot.stats.topApp}</p>
+                <p className="stat-with-icon" title={snapshot.stats.topApp}>
+                  <span className="stat-icon" aria-hidden="true">
+                    {topUsageEntries[0]?.icon.kind === "favicon" ? (
+                      <img src={topUsageEntries[0]?.icon.value} alt="" />
+                    ) : (
+                      <span>{topUsageEntries[0]?.icon.value ?? "🧩"}</span>
+                    )}
+                  </span>
+                  <span>{shortenLabel(snapshot.stats.topApp || "-", 20)}</span>
+                </p>
               </article>
               <article>
                 <h3>Phone pickups</h3>
@@ -426,16 +606,46 @@ export default function App() {
 
             <section className="card">
               <div className="card-title-row">
+                <h2>Screen time by device</h2>
+              </div>
+              {hasDeviceUsage ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={deviceUsageSeries}>
+                    <CartesianGrid strokeDasharray="4 4" />
+                    <XAxis dataKey="device" interval={0} tickLine={false} axisLine={false} height={54} />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value, name) => [formatMinutes(Number(value)), name]}
+                      labelFormatter={(label) => {
+                        const entry = deviceUsageSeries.find((item) => item.device === label);
+                        return entry ? `${entry.deviceType} · ${entry.deviceId}` : label;
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="dailyMinutes" name="Daily" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="weeklyMinutes" name="Weekly" fill="#7c3aed" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="detected-device-empty">No device usage captured yet.</p>
+              )}
+            </section>
+
+            <section className="card">
+              <div className="card-title-row">
                 <h2>Current app by device</h2>
                 {settings ? <span className="idle-pill">Idle detection on ({settings.idleThresholdSeconds}s)</span> : null}
               </div>
               {latestDetectedByDevice.length > 0 ? (
                 <div className="detected-device-grid">
-                  {latestDetectedByDevice.map((device) => (
+                  {latestDetectedByDevice.map((device) => {
+                    const icon = segmentIcon(device.segment);
+                    const canShowFavicon = icon.kind === "favicon" && !brokenIcons[device.segment.id];
+                    return (
                     <article key={device.id} className="detected-device-card">
                       <div className="detected-device-header">
                         <strong>
-                          {device.deviceType} · {device.deviceId}
+                          {formatDeviceLabel(device.deviceType, device.deviceId)}
                         </strong>
                         <span className={`freshness-pill ${device.freshness}`}>
                           {device.freshness === "active" ? "Active now" : device.freshness === "recent" ? "Recent" : "Stale"}
@@ -443,14 +653,29 @@ export default function App() {
                       </div>
                       <p className="detected-device-app">
                         <span className="device-app-icon" aria-hidden="true">
-                          {segmentIcon(device.segment)}
+                          {canShowFavicon ? (
+                            <img
+                              src={icon.value}
+                              alt=""
+                              onError={() =>
+                                setBrokenIcons((prev) => ({
+                                  ...prev,
+                                  [device.segment.id]: true
+                                }))
+                              }
+                            />
+                          ) : (
+                            <span>{segmentEmoji(device.segment)}</span>
+                          )}
                         </span>
-                        <span>{safeDomain(device.segment.pageUrl) || device.label || "Unknown app"}</span>
+                        <span title={safeDomain(device.segment.pageUrl) || device.label || "Unknown app"}>
+                          {shortenLabel(safeDomain(device.segment.pageUrl) || device.label || "Unknown app", 24)}
+                        </span>
                       </p>
                       <p className="detected-device-meta">{SOURCE_LABELS[device.source] ?? device.source}</p>
                       <p className="detected-device-meta">Last seen {formatRelativeMinutes(device.lastSeenMinutes)}</p>
                     </article>
-                  ))}
+                  )})}
                 </div>
               ) : (
                 <p className="detected-device-empty">No tracked sessions yet for this day.</p>
@@ -466,7 +691,7 @@ export default function App() {
                   {deviceUsageCards.map((device) => (
                     <article key={device.key} className="device-usage-card">
                       <h3>
-                        {device.deviceType} · {device.deviceId}
+                        {formatDeviceLabel(device.deviceType, device.deviceId)}
                       </h3>
                       <p className="device-usage-total">Total: {formatMinutes(device.totalMinutes)}</p>
                       <div className="device-usage-lines">
@@ -581,6 +806,7 @@ export default function App() {
                   selectedSegmentId={selectedSegment?.segment.id}
                   zoomLevel={timelineZoom}
                   expanded={timelineExpanded}
+                  dayStartMs={timelineDayStartMs}
                   onSelectSegment={(segment, selectedRow) => setSelectedSegment({ row: selectedRow, segment })}
                 />
               ))}
@@ -591,11 +817,39 @@ export default function App() {
                 <div className="selected-segment-card">
                   <h3>Selected session</h3>
                   <p className="selected-segment-title">
-                    <span aria-hidden="true">{segmentIcon(selectedSegment.segment)}</span>
-                    <span>{safeDomain(selectedSegment.segment.pageUrl) || selectedSegment.segment.label || "Unknown app/site"}</span>
+                    <span className="device-app-icon" aria-hidden="true">
+                      {(() => {
+                        const icon = segmentIcon(selectedSegment.segment);
+                        const canShowFavicon = icon.kind === "favicon" && !brokenIcons[selectedSegment.segment.id];
+                        return canShowFavicon ? (
+                        <img
+                          src={icon.value}
+                          alt=""
+                          onError={() =>
+                            setBrokenIcons((prev) => ({
+                              ...prev,
+                              [selectedSegment.segment.id]: true
+                            }))
+                          }
+                        />
+                      ) : (
+                        <span>{segmentEmoji(selectedSegment.segment)}</span>
+                      );
+                      })()}
+                    </span>
+                    <span
+                      title={
+                        safeDomain(selectedSegment.segment.pageUrl) || selectedSegment.segment.label || "Unknown app/site"
+                      }
+                    >
+                      {shortenLabel(
+                        safeDomain(selectedSegment.segment.pageUrl) || selectedSegment.segment.label || "Unknown app/site",
+                        28
+                      )}
+                    </span>
                   </p>
                   <p className="selected-segment-meta">
-                    {selectedSegment.row.deviceType} · {selectedSegment.row.deviceId} ·{" "}
+                    {formatDeviceLabel(selectedSegment.row.deviceType, selectedSegment.row.deviceId)} ·{" "}
                     {SOURCE_LABELS[selectedSegment.segment.source] ?? selectedSegment.segment.source}
                   </p>
                   <p className="selected-segment-meta">
@@ -614,11 +868,18 @@ export default function App() {
               <article className="card">
                 <h2>Top apps & sites</h2>
                 <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={topUsageChartData}>
+                  <BarChart data={topUsageEntries}>
                     <CartesianGrid strokeDasharray="4 4" />
-                    <XAxis dataKey="name" />
+                    <XAxis
+                      dataKey="name"
+                      height={48}
+                      interval={0}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={(props) => <UsageTick {...props} entries={topUsageEntries} />}
+                    />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip labelFormatter={(value) => value as string} />
                     <Bar dataKey="minutes" fill="#4f46e5" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
