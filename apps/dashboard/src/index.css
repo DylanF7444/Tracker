@@ -87,6 +87,7 @@ button {
 }
 
 .stats article,
+.device-usage,
 .timeline,
 .charts article {
   background: white;
@@ -99,6 +100,34 @@ button {
   font-size: 20px;
   margin: 8px 0 0;
   font-weight: 700;
+}
+
+.stat-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: #e2e8f0;
+}
+
+.stat-icon img {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+
+.device-usage .empty-state {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #64748b;
 }
 
 .timeline-row {
@@ -126,6 +155,25 @@ button {
   top: 3px;
   height: 20px;
   border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f8fafc;
+  font-size: 12px;
+}
+
+.segment-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.segment-icon img {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
 }
 
 .segment.productivity {

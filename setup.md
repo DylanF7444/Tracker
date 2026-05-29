@@ -1,5 +1,9 @@
 # Setup guide
 
+## Development protocol
+- Treat the Tauri desktop app (`apps/desktop`) as the primary product UI for new features and fixes.
+- Mirror changes into the web dashboard only when the feature is explicitly needed there.
+
 ## 1. Prerequisites
 
 ### Required for all
